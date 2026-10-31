@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "FarumaThaana";
+  src: url("/fonts/Faruma.ttf") format("truetype"),
+       url("../fonts/Faruma.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0780-07BF;
+}
+
+:root {
+  --app: #090B10;
+  --surface: #12151E;
+  --surface-hover: #171B26;
+  --elevated: #181C28;
+  --elevated-hover: #222838;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --fg: #FFFFFF;
+  --fg-soft: #E2E8F0;
+  --muted: #94A3B8;
+  --muted-soft: #64748B;
+  --accent: #6366F1;
+  --accent-soft: #818CF8;
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  --success: #10B981;
+  --success-glow: rgba(16, 185, 129, 0.15);
+  --warn: #F59E0B;
+  --danger: #F43F5E;
+}
+
+[data-theme="light"] {
+  --app: #F6F7FB;
+  --surface: #FFFFFF;
+  --surface-hover: #F8FAFC;
+  --elevated: #F1F3F9;
+  --elevated-hover: #E2E8F0;
+  --line: rgba(15, 23, 42, 0.08);
+  --line-strong: rgba(15, 23, 42, 0.16);
+  --fg: #0B1020;
+  --fg-soft: #1E293B;
+  --muted: #64748B;
+  --muted-soft: #94A3B8;
+  --accent: #4F46E5;
+  --accent-soft: #6366F1;
+  --accent-glow: rgba(79, 70, 229, 0.12);
+  --success: #059669;
+  --success-glow: rgba(5, 150, 105, 0.12);
+  --warn: #D97706;
+  --danger: #E11D48;
+}
+
+@theme {
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-elevated: var(--elevated);
+  --color-elevated-hover: var(--elevated-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-muted: var(--muted);
+  --color-muted-soft: var(--muted-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-glow: var(--accent-glow);
+  --color-success: var(--success);
+  --color-success-glow: var(--success-glow);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  --font-sans: "FarumaThaana", var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  body {
+    background-color: var(--app);
+    color: var(--fg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    font-family: var(--font-sans);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Explicit class for Faruma / Dhivehi Typography */
+.font-faruma {
+  font-family: "FarumaThaana", system-ui, -apple-system, sans-serif !important;
+  line-height: 1.95;
+}
+
+.font-dhivehi {
+  font-family: "FarumaThaana", system-ui, -apple-system, sans-serif !important;
+  direction: rtl;
+  unicode-bidi: isolate;
+  line-height: 1.95;
+}
+
+/* 3D Flip Flashcard Support */
+.perspective-1000 {
+  perspective: 1000px;
+  -webkit-perspective: 1000px;
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+  -webkit-perspective: 1200px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Sleek modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Print Media Styles: Clean A4 Output for Printable Flashcards */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #000000 !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  header,
+  footer,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .printable-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+}
