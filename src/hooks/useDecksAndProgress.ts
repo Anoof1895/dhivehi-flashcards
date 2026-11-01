@@ -13,6 +13,7 @@ const CUSTOM_DECKS_KEY = "dhivehi_flashcards_custom_decks_v1";
 const ACTIVE_DECK_KEY = "dhivehi_flashcards_active_deck_v1";
 const PROGRESS_MAP_KEY = "dhivehi_flashcards_progress_v1";
 const FRONT_SIDE_KEY = "dhivehi_flashcards_front_side_v1";
+const BUILTIN_OVERRIDES_KEY = "dhivehi_flashcards_builtin_overrides_v1";
 
 interface DeckProgressEntry {
   memorized: number[];
@@ -24,6 +25,7 @@ type ProgressMap = Record<string, DeckProgressEntry>;
 
 interface StudioSnapshot {
   customDecks: FlashcardDeckData[];
+  builtinOverrides: Record<string, FlashcardDeckData>;
   activeDeckId: string;
   progressMap: ProgressMap;
   frontSide: CardSide;
@@ -31,6 +33,7 @@ interface StudioSnapshot {
 
 const SERVER_SNAPSHOT: StudioSnapshot = {
   customDecks: [],
+  builtinOverrides: {},
   activeDeckId: DEFAULT_DECK_ID,
   progressMap: {},
   frontSide: "term",
@@ -70,8 +73,9 @@ function getClientSnapshot(): StudioSnapshot {
     const rawActive = localStorage.getItem(ACTIVE_DECK_KEY) ?? "";
     const rawProgress = localStorage.getItem(PROGRESS_MAP_KEY) ?? "";
     const rawFront = localStorage.getItem(FRONT_SIDE_KEY) ?? "";
+    const rawOverrides = localStorage.getItem(BUILTIN_OVERRIDES_KEY) ?? "";
 
-    const combinedKey = `${rawDecks}|||${rawActive}|||${rawProgress}|||${rawFront}`;
+    const combinedKey = `${rawDecks}|||${rawActive}|||${rawProgress}|||${rawFront}|||${rawOverrides}`;
     if (combinedKey === cachedRawKey) {
       return cachedSnapshot;
     }
@@ -87,6 +91,14 @@ function getClientSnapshot(): StudioSnapshot {
             typeof d.title === "string" &&
             Array.isArray(d.cards)
         );
+      }
+    }
+
+    let builtinOverrides: Record<string, FlashcardDeckData> = {};
+    if (rawOverrides) {
+      const parsedOverrides = JSON.parse(rawOverrides);
+      if (parsedOverrides && typeof parsedOverrides === "object") {
+        builtinOverrides = parsedOverrides;
       }
     }
 
@@ -113,6 +125,7 @@ function getClientSnapshot(): StudioSnapshot {
     cachedRawKey = combinedKey;
     cachedSnapshot = {
       customDecks,
+      builtinOverrides,
       activeDeckId,
       progressMap,
       frontSide,
@@ -134,15 +147,27 @@ export function useDecksAndProgress() {
     getServerSnapshot
   );
 
-  const { customDecks, activeDeckId, progressMap, frontSide } = snapshot;
+  const { customDecks, builtinOverrides, activeDeckId, progressMap, frontSide } = snapshot;
 
-  const allDecks = useMemo(
-    () => [...BUILT_IN_DECKS, ...customDecks],
-    [customDecks]
-  );
+  const allDecks = useMemo(() => {
+    const builtInResolved = BUILT_IN_DECKS.map((bd) => {
+      const override = builtinOverrides[bd.id];
+      if (override && Array.isArray(override.cards)) {
+        return {
+          ...bd,
+          title: override.title || bd.title,
+          titleDv: override.titleDv ?? bd.titleDv,
+          cards: override.cards,
+          updatedAt: override.updatedAt || bd.updatedAt,
+        };
+      }
+      return bd;
+    });
+    return [...builtInResolved, ...customDecks];
+  }, [builtinOverrides, customDecks]);
 
   const activeDeck = useMemo(
-    () => allDecks.find((d) => d.id === activeDeckId) ?? BUILT_IN_DECKS[0],
+    () => allDecks.find((d) => d.id === activeDeckId) ?? allDecks[0] ?? BUILT_IN_DECKS[0],
     [allDecks, activeDeckId]
   );
 
@@ -209,62 +234,174 @@ export function useDecksAndProgress() {
     (deckId: string, title: string, cards: FlashcardItem[]) => {
       const now = Date.now();
       const normalizedCards = cards.map((c, idx) => ({
-        id: idx + 1,
+        id: c.id > 0 ? c.id : idx + 1,
         term: c.term.trim(),
         definition: c.definition.trim(),
       }));
       const validIds = new Set(normalizedCards.map((c) => c.id));
       const snap = getClientSnapshot();
 
-      const nextDecks = snap.customDecks.map((d) =>
-        d.id === deckId
-          ? {
-              ...d,
-              title: title.trim() || d.title,
-              updatedAt: now,
-              cards: normalizedCards,
-            }
-          : d
-      );
+      const isBuiltIn = BUILT_IN_DECKS.some((b) => b.id === deckId);
+      if (isBuiltIn) {
+        const original = BUILT_IN_DECKS.find((b) => b.id === deckId)!;
+        const nextOverrides = {
+          ...snap.builtinOverrides,
+          [deckId]: {
+            ...original,
+            title: title.trim() || original.title,
+            cards: normalizedCards,
+            updatedAt: now,
+          },
+        };
+        try {
+          localStorage.setItem(BUILTIN_OVERRIDES_KEY, JSON.stringify(nextOverrides));
+        } catch {
+          // Ignore storage errors
+        }
+      } else {
+        const nextDecks = snap.customDecks.map((d) =>
+          d.id === deckId
+            ? {
+                ...d,
+                title: title.trim() || d.title,
+                updatedAt: now,
+                cards: normalizedCards,
+              }
+            : d
+        );
+        try {
+          localStorage.setItem(CUSTOM_DECKS_KEY, JSON.stringify(nextDecks));
+        } catch {
+          // Ignore storage errors
+        }
+      }
+
+      // Prune progress map for cards that may have been deleted
+      const existingProg = snap.progressMap[deckId];
+      if (existingProg) {
+        const nextMap: ProgressMap = {
+          ...snap.progressMap,
+          [deckId]: {
+            memorized: existingProg.memorized.filter((id) => validIds.has(id)),
+            favorites: existingProg.favorites.filter((id) => validIds.has(id)),
+          },
+        };
+        try {
+          localStorage.setItem(PROGRESS_MAP_KEY, JSON.stringify(nextMap));
+        } catch {
+          // Ignore storage errors
+        }
+      }
+
+      emitChange();
+    },
+    []
+  );
+
+  const saveCard = useCallback(
+    (
+      deckId: string,
+      cardInput: { id?: number; term: string; definition: string }
+    ): FlashcardItem => {
+      const snap = getClientSnapshot();
+      const isBuiltIn = BUILT_IN_DECKS.some((b) => b.id === deckId);
+      let currentDeck: FlashcardDeckData | undefined;
+
+      if (isBuiltIn) {
+        currentDeck =
+          snap.builtinOverrides[deckId] ?? BUILT_IN_DECKS.find((b) => b.id === deckId);
+      } else {
+        currentDeck = snap.customDecks.find((d) => d.id === deckId);
+      }
+
+      const currentCards = currentDeck ? [...currentDeck.cards] : [];
+      let savedCard: FlashcardItem;
+
+      if (cardInput.id !== undefined && currentCards.some((c) => c.id === cardInput.id)) {
+        savedCard = {
+          id: cardInput.id,
+          term: cardInput.term.trim(),
+          definition: cardInput.definition.trim(),
+        };
+        const nextCards = currentCards.map((c) =>
+          c.id === cardInput.id ? savedCard : c
+        );
+        updateDeck(deckId, currentDeck?.title ?? "Deck", nextCards);
+      } else {
+        const maxId = currentCards.reduce((acc, c) => Math.max(acc, c.id), 0);
+        savedCard = {
+          id: maxId + 1,
+          term: cardInput.term.trim(),
+          definition: cardInput.definition.trim(),
+        };
+        const nextCards = [...currentCards, savedCard];
+        updateDeck(deckId, currentDeck?.title ?? "Deck", nextCards);
+      }
+
+      return savedCard;
+    },
+    [updateDeck]
+  );
+
+  const deleteCard = useCallback(
+    (deckId: string, cardId: number) => {
+      const snap = getClientSnapshot();
+      const isBuiltIn = BUILT_IN_DECKS.some((b) => b.id === deckId);
+      let currentDeck: FlashcardDeckData | undefined;
+
+      if (isBuiltIn) {
+        currentDeck =
+          snap.builtinOverrides[deckId] ?? BUILT_IN_DECKS.find((b) => b.id === deckId);
+      } else {
+        currentDeck = snap.customDecks.find((d) => d.id === deckId);
+      }
+
+      if (!currentDeck) return;
+      const nextCards = currentDeck.cards.filter((c) => c.id !== cardId);
+      updateDeck(deckId, currentDeck.title, nextCards);
+    },
+    [updateDeck]
+  );
+
+  const resetBuiltInDeck = useCallback((deckId: string) => {
+    const snap = getClientSnapshot();
+    if (!snap.builtinOverrides[deckId]) return;
+    const nextOverrides = { ...snap.builtinOverrides };
+    delete nextOverrides[deckId];
+    try {
+      localStorage.setItem(BUILTIN_OVERRIDES_KEY, JSON.stringify(nextOverrides));
+      emitChange();
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const deleteDeck = useCallback(
+    (deckId: string) => {
+      const isBuiltIn = BUILT_IN_DECKS.some((b) => b.id === deckId);
+      if (isBuiltIn) {
+        resetBuiltInDeck(deckId);
+        return;
+      }
+
+      const snap = getClientSnapshot();
+      const nextDecks = snap.customDecks.filter((d) => d.id !== deckId);
+      const nextMap = { ...snap.progressMap };
+      delete nextMap[deckId];
 
       try {
         localStorage.setItem(CUSTOM_DECKS_KEY, JSON.stringify(nextDecks));
-        const existingProg = snap.progressMap[deckId];
-        if (existingProg) {
-          const nextMap: ProgressMap = {
-            ...snap.progressMap,
-            [deckId]: {
-              memorized: existingProg.memorized.filter((id) => validIds.has(id)),
-              favorites: existingProg.favorites.filter((id) => validIds.has(id)),
-            },
-          };
-          localStorage.setItem(PROGRESS_MAP_KEY, JSON.stringify(nextMap));
+        localStorage.setItem(PROGRESS_MAP_KEY, JSON.stringify(nextMap));
+        if (snap.activeDeckId === deckId) {
+          localStorage.setItem(ACTIVE_DECK_KEY, DEFAULT_DECK_ID);
         }
         emitChange();
       } catch {
         // Ignore storage errors
       }
     },
-    []
+    [resetBuiltInDeck]
   );
-
-  const deleteDeck = useCallback((deckId: string) => {
-    const snap = getClientSnapshot();
-    const nextDecks = snap.customDecks.filter((d) => d.id !== deckId);
-    const nextMap = { ...snap.progressMap };
-    delete nextMap[deckId];
-
-    try {
-      localStorage.setItem(CUSTOM_DECKS_KEY, JSON.stringify(nextDecks));
-      localStorage.setItem(PROGRESS_MAP_KEY, JSON.stringify(nextMap));
-      if (snap.activeDeckId === deckId) {
-        localStorage.setItem(ACTIVE_DECK_KEY, DEFAULT_DECK_ID);
-      }
-      emitChange();
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
 
   const validDeckCardIds = useMemo(
     () => new Set(activeDeck.cards.map((c) => c.id)),
@@ -359,6 +496,9 @@ export function useDecksAndProgress() {
     createDeck,
     updateDeck,
     deleteDeck,
+    saveCard,
+    deleteCard,
+    resetBuiltInDeck,
     frontSide,
     setFrontSide,
     toggleFrontSide,

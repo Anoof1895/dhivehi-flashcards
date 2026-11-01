@@ -10,6 +10,7 @@ import {
   Shuffle,
   BookOpen,
   ArrowLeftRight,
+  Plus,
 } from "lucide-react";
 import { FlashcardDeckData, FlashcardItem, CardSide } from "@/data/decks";
 import { Flashcard3D } from "./Flashcard3D";
@@ -24,6 +25,8 @@ interface FlashcardDeckProps {
   favorites: Set<number>;
   onToggleMemorized: (id: number) => void;
   onToggleFavorite: (id: number) => void;
+  onEditCard?: (card: FlashcardItem) => void;
+  onAddCard?: () => void;
   initialCardId?: number;
   lang?: "en" | "dv";
 }
@@ -45,6 +48,8 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
   favorites,
   onToggleMemorized,
   onToggleFavorite,
+  onEditCard,
+  onAddCard,
   initialCardId,
   lang = "en",
 }) => {
@@ -330,6 +335,20 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
             <Shuffle className="w-3.5 h-3.5" />
             <span>{lang === "dv" ? "އޮޅުވާލާ" : "Shuffle"}</span>
           </button>
+
+          {onAddCard && (
+            <button
+              type="button"
+              onClick={onAddCard}
+              className="font-faruma flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-surface border border-line text-muted hover:text-fg hover:border-line-strong active:scale-95"
+              title="Add a new card to this deck"
+            >
+              <Plus className="w-3.5 h-3.5 text-accent" />
+              <span className="hidden sm:inline">
+                {lang === "dv" ? "އާ ކާޑެއް" : "Add Card"}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -401,6 +420,7 @@ export const FlashcardDeck: React.FC<FlashcardDeckProps> = ({
                 isFavorite={favorites.has(currentCard.id)}
                 onToggleMemorized={() => onToggleMemorized(currentCard.id)}
                 onToggleFavorite={() => onToggleFavorite(currentCard.id)}
+                onEditCard={onEditCard}
                 onSwipeLeft={handleNext}
                 onSwipeRight={handlePrev}
                 cardIndex={safeIndex}

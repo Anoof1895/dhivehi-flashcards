@@ -21,7 +21,7 @@ export type CardSide = "term" | "definition";
 export const DEFAULT_DECK_ID = "dhivehi-baskoshaaru-u3-u5";
 
 export const DEFAULT_BASKOSHAARU_CARDS: FlashcardItem[] = [
-  { id: 1, term: "ޙުރުމަތްތެރި", definition: "މަތިވެރި / އިއްޒަތްތެރި / ކަމޭހިތާ ހިތުން" },
+  { id: 1, term: "ޙުރުމަތްތެރި", definition: "ގަދަރުވެރި / އިއްޒަތްތެރި / ކަމޭހިތާ ހިތުން" },
   { id: 2, term: "ނަލަހެދުން", definition: "ރީތި ފޭރާންލައި ޒީނަތްތެރިވުން" },
   { id: 3, term: "ނުފޫޒު", definition: "އެހެން މީހުންގެ މައްޗަށް ފޯރުވާ ބާރު" },
   { id: 4, term: "އަހުލުވެރިވުން", definition: "ކަމެއްގެ ތެރެއަށް ވައްދައި އެކަމުގެ މައުލޫމާތުދިނުން" },

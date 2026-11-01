@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { motion, useMotionValue, useMotionTemplate } from "framer-motion";
-import { Search, Heart, Check, X } from "lucide-react";
+import { Search, Heart, Check, X, Pencil, Plus } from "lucide-react";
 import {
   FlashcardDeckData,
   FlashcardItem,
@@ -18,6 +18,8 @@ interface CardsGridViewProps {
   onToggleMemorized: (id: number) => void;
   onToggleFavorite: (id: number) => void;
   onSelectCard: (id: number) => void;
+  onEditCard?: (card: FlashcardItem) => void;
+  onAddCard?: () => void;
   lang?: "en" | "dv";
 }
 
@@ -30,6 +32,7 @@ interface GridCardProps {
   onToggleMemorized: () => void;
   onToggleFavorite: () => void;
   onSelect: () => void;
+  onEdit?: () => void;
   lang: "en" | "dv";
 }
 
@@ -40,6 +43,7 @@ const GridCard: React.FC<GridCardProps> = ({
   onToggleMemorized,
   onToggleFavorite,
   onSelect,
+  onEdit,
   lang,
 }) => {
   const mouseX = useMotionValue(-1000);
@@ -98,6 +102,21 @@ const GridCard: React.FC<GridCardProps> = ({
         {/* Top Header Row */}
         <div className="relative z-10 flex items-center justify-between w-full mb-2" dir="ltr">
           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {onEdit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1.5 rounded-lg transition-all text-muted hover:text-accent-soft hover:bg-elevated"
+                aria-label="Edit card"
+                title={lang === "dv" ? "ކާޑު ބަދަލުކުރުން" : "Edit card"}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onToggleFavorite}
@@ -181,6 +200,8 @@ export const CardsGridView: React.FC<CardsGridViewProps> = ({
   onToggleMemorized,
   onToggleFavorite,
   onSelectCard,
+  onEditCard,
+  onAddCard,
   lang = "en",
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -311,6 +332,18 @@ export const CardsGridView: React.FC<CardsGridViewProps> = ({
               {lang === "dv" ? `ފޭވަރިޓް (${favorites.size})` : `Favorites (${favorites.size})`}
             </button>
           </div>
+
+          {onAddCard && (
+            <button
+              type="button"
+              onClick={onAddCard}
+              className="font-faruma flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-accent hover:bg-accent/90 text-white transition shadow-sm active:scale-95 shrink-0"
+              title="Add a new card to this deck"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>{lang === "dv" ? "އާ ކާޑެއް" : "Add Card"}</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-line">
@@ -339,6 +372,7 @@ export const CardsGridView: React.FC<CardsGridViewProps> = ({
               onToggleMemorized={() => onToggleMemorized(card.id)}
               onToggleFavorite={() => onToggleFavorite(card.id)}
               onSelect={() => onSelectCard(card.id)}
+              onEdit={() => onEditCard?.(card)}
               lang={lang}
             />
           ))}

@@ -7,7 +7,7 @@ import {
   useSpring,
   useMotionTemplate,
 } from "framer-motion";
-import { Check, Heart } from "lucide-react";
+import { Check, Heart, Pencil } from "lucide-react";
 import {
   FlashcardItem,
   CardSide,
@@ -23,6 +23,7 @@ interface Flashcard3DProps {
   isFavorite: boolean;
   onToggleMemorized: () => void;
   onToggleFavorite: () => void;
+  onEditCard?: (card: FlashcardItem) => void;
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
   cardIndex: number;
@@ -39,6 +40,7 @@ export const Flashcard3D: React.FC<Flashcard3DProps> = ({
   isFavorite,
   onToggleMemorized,
   onToggleFavorite,
+  onEditCard,
   onSwipeLeft,
   onSwipeRight,
   lang = "en",
@@ -237,8 +239,23 @@ export const Flashcard3D: React.FC<Flashcard3DProps> = ({
                     </span>
                   </div>
 
-                  {/* Top Actions: Favorite (Amber) & Memorized (Emerald) */}
+                  {/* Top Actions: Edit (Pencil), Favorite (Amber) & Memorized (Emerald) */}
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {onEditCard && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditCard(card);
+                        }}
+                        className="p-2 rounded-xl transition-all active:scale-95 text-muted hover:text-accent-soft hover:bg-elevated"
+                        aria-label="Edit Card"
+                        title={lang === "dv" ? "ކާޑު ބަދަލުކުރުން" : "Edit Card"}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={onToggleFavorite}
@@ -345,6 +362,21 @@ export const Flashcard3D: React.FC<Flashcard3DProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {onEditCard && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditCard(card);
+                        }}
+                        className="p-2 rounded-xl transition-all active:scale-95 text-muted hover:text-accent-soft hover:bg-elevated"
+                        aria-label="Edit Card"
+                        title={lang === "dv" ? "ކާޑު ބަދަލުކުރުން" : "Edit Card"}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={onToggleFavorite}

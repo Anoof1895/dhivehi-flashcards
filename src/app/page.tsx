@@ -22,7 +22,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { FlashcardDeckData } from "@/data/decks";
+import { FlashcardDeckData, FlashcardItem } from "@/data/decks";
 import { useDecksAndProgress } from "@/hooks/useDecksAndProgress";
 import { useTheme } from "@/hooks/useTheme";
 import { FlashcardDeck } from "@/components/FlashcardDeck";
@@ -31,6 +31,7 @@ import { MatchGameView } from "@/components/MatchGameView";
 import { CardsGridView } from "@/components/CardsGridView";
 import { PrintableCardsView } from "@/components/PrintableCardsView";
 import { DeckModal, DeckModalMode } from "@/components/DeckModal";
+import { EditCardModal } from "@/components/EditCardModal";
 
 type ActiveTab = "flashcards" | "learn" | "match" | "browse" | "print";
 
@@ -49,6 +50,10 @@ export default function HomePage() {
   const [deckModalMode, setDeckModalMode] = useState<DeckModalMode>("create");
   const [modalTargetDeck, setModalTargetDeck] = useState<FlashcardDeckData | null>(null);
 
+  // Card Edit Modal state
+  const [editingCard, setEditingCard] = useState<FlashcardItem | null>(null);
+  const [isEditCardModalOpen, setIsEditCardModalOpen] = useState(false);
+
   const deckMenuRef = useRef<HTMLDivElement | null>(null);
 
   const {
@@ -58,6 +63,8 @@ export default function HomePage() {
     createDeck,
     updateDeck,
     deleteDeck,
+    saveCard,
+    deleteCard,
     frontSide,
     toggleFrontSide,
     memorized,
@@ -66,6 +73,24 @@ export default function HomePage() {
     toggleFavorite,
     resetDeckProgress,
   } = useDecksAndProgress();
+
+  const handleOpenEditCard = (card: FlashcardItem) => {
+    setEditingCard(card);
+    setIsEditCardModalOpen(true);
+  };
+
+  const handleOpenAddCard = () => {
+    setEditingCard(null);
+    setIsEditCardModalOpen(true);
+  };
+
+  const handleSaveCard = (cardData: { id?: number; term: string; definition: string }) => {
+    saveCard(activeDeck.id, cardData);
+  };
+
+  const handleDeleteCard = (cardId: number) => {
+    deleteCard(activeDeck.id, cardId);
+  };
 
   // Keep document html lang in sync
   useEffect(() => {
@@ -231,29 +256,28 @@ export default function HomePage() {
                               <Download className="w-3.5 h-3.5" />
                             </button>
 
+                            <button
+                              type="button"
+                              onClick={() => openModal("edit", d)}
+                              className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-elevated transition"
+                              title="Edit Deck"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+
                             {!d.isBuiltIn && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => openModal("edit", d)}
-                                  className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-elevated transition"
-                                  title="Edit Deck"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (window.confirm(`Delete deck "${d.title}"?`)) {
-                                      deleteDeck(d.id);
-                                    }
-                                  }}
-                                  className="p-1.5 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition"
-                                  title="Delete Deck"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm(`Delete deck "${d.title}"?`)) {
+                                    deleteDeck(d.id);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition"
+                                title="Delete Deck"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             )}
                           </div>
                         </div>
@@ -285,6 +309,19 @@ export default function HomePage() {
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span className="hidden sm:inline">
                 {lang === "dv" ? "އާ ޑެކެއް" : "New Deck"}
+              </span>
+            </button>
+
+            {/* "Edit Deck" Button */}
+            <button
+              type="button"
+              onClick={() => openModal("edit", activeDeck)}
+              className="font-faruma flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-elevated hover:bg-elevated-hover border border-line text-xs font-semibold text-fg transition whitespace-nowrap shrink-0 shadow-sm active:scale-95"
+              title="Edit Active Deck"
+            >
+              <Pencil className="w-3.5 h-3.5 text-accent-soft" />
+              <span className="hidden sm:inline">
+                {lang === "dv" ? "ޑެކް ބަދަލުކުރުން" : "Edit Deck"}
               </span>
             </button>
           </div>
@@ -424,6 +461,8 @@ export default function HomePage() {
             favorites={favorites}
             onToggleMemorized={toggleMemorized}
             onToggleFavorite={toggleFavorite}
+            onEditCard={handleOpenEditCard}
+            onAddCard={handleOpenAddCard}
             initialCardId={selectedCardId}
             lang={lang}
           />
@@ -451,6 +490,8 @@ export default function HomePage() {
             onToggleMemorized={toggleMemorized}
             onToggleFavorite={toggleFavorite}
             onSelectCard={handleSelectCardFromGrid}
+            onEditCard={handleOpenEditCard}
+            onAddCard={handleOpenAddCard}
             lang={lang}
           />
         ) : (
@@ -558,6 +599,19 @@ export default function HomePage() {
       </footer>
 
       {/* ================= MODALS ================= */}
+      {isEditCardModalOpen && (
+        <EditCardModal
+          key={editingCard ? `card-${editingCard.id}` : "card-new"}
+          isOpen={isEditCardModalOpen}
+          card={editingCard}
+          deckTitle={lang === "dv" && activeDeck.titleDv ? activeDeck.titleDv : activeDeck.title}
+          onClose={() => setIsEditCardModalOpen(false)}
+          onSave={handleSaveCard}
+          onDelete={handleDeleteCard}
+          lang={lang}
+        />
+      )}
+
       {deckModalOpen && (
         <DeckModal
           key={`${deckModalMode}-${(modalTargetDeck ?? activeDeck).id}`}

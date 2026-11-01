@@ -49,7 +49,7 @@ export const DeckModal: React.FC<DeckModalProps> = ({
   onDeleteDeck,
   lang = "en",
 }) => {
-  const isInitialEdit = mode === "edit" && !targetDeck.isBuiltIn;
+  const isInitialEdit = mode === "edit";
   const [activeMode, setActiveMode] = useState<DeckModalMode>(mode);
   const [title, setTitle] = useState(() => (isInitialEdit ? targetDeck.title : ""));
   const [rawText, setRawText] = useState(() =>
@@ -195,7 +195,7 @@ export const DeckModal: React.FC<DeckModalProps> = ({
       title.trim() ||
       (lang === "dv" ? "އާ ބަސްކޮށާރު" : `Custom Deck (${parsedCards.length})`);
 
-    if (activeMode === "edit" && !targetDeck.isBuiltIn) {
+    if (activeMode === "edit") {
       onUpdateDeck(targetDeck.id, deckTitle, parsedCards);
     } else {
       onCreateDeck(deckTitle, parsedCards);
@@ -238,11 +238,11 @@ export const DeckModal: React.FC<DeckModalProps> = ({
 
   const placeholderExample =
     termDelim === "tab"
-      ? "ޙުރުމަތްތެރި\tމަތިވެރި / އިއްޒަތްތެރި\nނަލަހެދުން\tރީތި ފޭރާންލައި ޒީނަތްތެރިވުން\nResilience\tހިތްވަރު"
+      ? "ޙުރުމަތްތެރި\tގަދަރުވެރި / އިއްޒަތްތެރި\nނަލަހެދުން\tރީތި ފޭރާންލައި ޒީނަތްތެރިވުން\nResilience\tހިތްވަރު"
       : termDelim === "dash"
-      ? "ޙުރުމަތްތެރި - މަތިވެރި / އިއްޒަތްތެރި\nނަލަހެދުން - ރީތި ފޭރާންލައި ޒީނަތްތެރިވުން"
+      ? "ޙުރުމަތްތެރި - ގަދަރުވެރި / އިއްޒަތްތެރި\nނަލަހެދުން - ރީތި ފޭރާންލައި ޒީނަތްތެރިވުން"
       : termDelim === "comma"
-      ? "ޙުރުމަތްތެރި, މަތިވެރި / އިއްޒަތްތެރި\nResilience, ހިތްވަރު"
+      ? "ޙުރުމަތްތެރި, ގަދަރުވެރި / އިއްޒަތްތެރި\nResilience, ހިތްވަރު"
       : "Term" + customTermDelim + "Definition";
 
   return (
@@ -292,26 +292,24 @@ export const DeckModal: React.FC<DeckModalProps> = ({
               >
                 + New / Import
               </button>
-              {!targetDeck.isBuiltIn && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMode("edit");
-                    setTitle(targetDeck.title);
-                    setTermDelim("tab");
-                    setRowDelim("newline");
-                    setRawText(serializeDeckText(targetDeck.cards, "\t", "\n"));
-                  }}
-                  className={`px-3 py-1 rounded-lg transition flex items-center gap-1 ${
-                    activeMode === "edit"
-                      ? "bg-accent/15 text-accent-soft border border-accent/30 shadow-sm"
-                      : "text-muted hover:text-fg"
-                  }`}
-                >
-                  <Pencil className="w-3 h-3" />
-                  Edit Active
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMode("edit");
+                  setTitle(targetDeck.title);
+                  setTermDelim("tab");
+                  setRowDelim("newline");
+                  setRawText(serializeDeckText(targetDeck.cards, "\t", "\n"));
+                }}
+                className={`px-3 py-1 rounded-lg transition flex items-center gap-1 ${
+                  activeMode === "edit"
+                    ? "bg-accent/15 text-accent-soft border border-accent/30 shadow-sm"
+                    : "text-muted hover:text-fg"
+                }`}
+              >
+                <Pencil className="w-3 h-3" />
+                Edit Active
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveMode("export")}
@@ -668,15 +666,14 @@ export const DeckModal: React.FC<DeckModalProps> = ({
         {activeMode !== "export" && (
           <div className="flex flex-wrap items-center justify-between gap-2 px-6 py-4 border-t border-line bg-surface">
             <div>
-              {activeMode === "edit" && !targetDeck.isBuiltIn && (
+              {activeMode === "edit" && (
                 <button
                   type="button"
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        `Delete custom deck "${targetDeck.title}"? This cannot be undone.`
-                      )
-                    ) {
+                    const confirmMsg = targetDeck.isBuiltIn
+                      ? `Reset "${targetDeck.title}" back to default built-in cards?`
+                      : `Delete custom deck "${targetDeck.title}"? This cannot be undone.`;
+                    if (window.confirm(confirmMsg)) {
                       onDeleteDeck(targetDeck.id);
                       onClose();
                     }
@@ -684,7 +681,7 @@ export const DeckModal: React.FC<DeckModalProps> = ({
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-danger/10 hover:bg-danger/20 border border-danger/25 text-danger text-xs font-semibold transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Deck</span>
+                  <span>{targetDeck.isBuiltIn ? "Reset to Default" : "Delete Deck"}</span>
                 </button>
               )}
             </div>
